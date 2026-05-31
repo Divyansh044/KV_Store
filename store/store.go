@@ -98,7 +98,11 @@ type Command struct {
 func (c Command) String() string {
 	return fmt.Sprintf("%s key=%s value=%s", c.operation, c.key, c.value)
 }
-
-// ============================================================
-// Main — demo of the working KV store
-// ===============================
+// Keys returns all keys in the store
+func (k *KVStore) Keys() []string {
+	keys := make([]string, 0, len(k.data))
+	for key := range k.data {
+		keys = append(keys, key)
+	}
+	return keys
+}
