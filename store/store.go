@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Divyansh044/KV_Store/wal"
 )
@@ -33,6 +34,7 @@ type KVStore struct {
 	name string
 	data map[string]string
 	wal  *wal.WAL
+	mu   sync.RWMutex
 }
 
 // NewKVStore creates a ready-to-use KV store.
@@ -44,15 +46,16 @@ func NewKVStore(name string, w *wal.WAL) *KVStore {
 		wal:  w,
 	}
 }
-//these are for replay only, no WAL write
+
+// these are for replay only, no WAL write
 func (k *KVStore) ApplySet(key, value string) error {
-    k.data[key] = value
-    return nil
+	k.data[key] = value
+	return nil
 }
 
 func (k *KVStore) ApplyDelete(key string) error {
-    delete(k.data, key)
-    return nil
+	delete(k.data, key)
+	return nil
 }
 func (k *KVStore) Info() string {
 	return fmt.Sprintf("KVStore[%s] — %d keys", k.name, len(k.data))
@@ -68,6 +71,8 @@ func (k *KVStore) Set(key, value string) error {
 	if err := validateKey(key); err != nil {
 		return err
 	}
+	k.mu.Lock()
+	defer k.mu.Unlock()
 	if k.wal != nil {
 		entry := fmt.Sprintf("SET %s %s", key, value)
 		if err := k.wal.Append(entry); err != nil {
@@ -84,6 +89,8 @@ func (k *KVStore) Get(key string) (string, error) {
 	if err := validateKey(key); err != nil {
 		return "", err
 	}
+	k.mu.RLock()
+	defer k.mu.RUnlock()
 	value, exists := k.data[key]
 	if !exists {
 		return "", fmt.Errorf("Get(%s): %w", key, ErrKeyNotFound)
@@ -97,6 +104,8 @@ func (k *KVStore) Delete(key string) error {
 	if err := validateKey(key); err != nil {
 		return err
 	}
+	k.mu.Lock()
+	defer k.mu.Unlock()
 
 	if _, exists := k.data[key]; !exists {
 		return fmt.Errorf("Delete(%s): %w", key, ErrKeyNotFound)
@@ -127,6 +136,8 @@ func (c Command) String() string {
 
 // Keys returns all keys in the store
 func (k *KVStore) Keys() []string {
+	k.mu.RLock()
+	defer k.mu.RUnlock()
 	keys := make([]string, 0, len(k.data))
 	for key := range k.data {
 		keys = append(keys, key)
