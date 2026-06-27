@@ -144,3 +144,14 @@ func (k *KVStore) Keys() []string {
 	}
 	return keys
 }
+func (k *KVStore) Snapshot() map[string]string {
+    k.mu.RLock()
+    defer k.mu.RUnlock()
+    
+    // make a copy — don't return the real map
+    copy := make(map[string]string, len(k.data))
+    for key, val := range k.data {
+        copy[key] = val
+    }
+    return copy
+}

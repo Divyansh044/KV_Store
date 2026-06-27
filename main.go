@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
-
+	"github.com/Divyansh044/KV_Store/snapshot"
 	"github.com/Divyansh044/KV_Store/store"
 	"github.com/Divyansh044/KV_Store/tcp"
 	"github.com/Divyansh044/KV_Store/wal"
+	"os"
 )
 
 func main() {
@@ -19,6 +19,10 @@ func main() {
 
 	// create store with WAL
 	s := store.NewKVStore("mystore", w)
+	if err := snapshot.Load(s, "snapshot.db"); err != nil {
+		fmt.Println("failed to load snapshot:", err)
+		os.Exit(1)
+	}
 
 	// replay WAL — restore state from last run
 	if err := w.Replay(s); err != nil {

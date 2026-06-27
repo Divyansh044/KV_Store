@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/Divyansh044/KV_Store/snapshot"
+	"github.com/Divyansh044/KV_Store/store"
 	"net"
 	"strings"
-
-	"github.com/Divyansh044/KV_Store/store"
 )
 
 func StartServer(addr string, s *store.KVStore) error {
@@ -83,7 +83,12 @@ func handleClient(conn net.Conn, s *store.KVStore) {
 			} else {
 				fmt.Fprintf(conn, "OK\n")
 			}
-
+		case "SNAPSHOT":
+			if err := snapshot.Save(s, "snapshot.db", "wal.log"); err != nil {
+				fmt.Fprintf(conn, "ERROR: %v\n", err)
+			} else {
+				fmt.Fprintf(conn, "snapshot saved\n")
+			}
 		case "LIST":
 			keys := s.Keys()
 			if len(keys) == 0 {
